@@ -1,5 +1,5 @@
 digraph UML {
-  graph [rankdir=LR, splines=ortho, nodesep=0.55, ranksep=0.75, bgcolor="white", pad=0.25];
+  graph [rankdir=TB, splines=polyline, nodesep=0.45, ranksep=0.55, bgcolor="white", pad=0.25];
   node [shape=plain, fontname="Arial", fontsize=10];
   edge [fontname="Arial", fontsize=9, arrowsize=0.8];
 
