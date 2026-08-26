@@ -1,0 +1,91 @@
+digraph UML {
+  graph [rankdir=LR, splines=ortho, nodesep=0.55, ranksep=0.75, bgcolor="white", pad=0.25];
+  node [shape=plain, fontname="Arial", fontsize=10];
+  edge [fontname="Arial", fontsize=9, arrowsize=0.8];
+
+  Usuario [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="5">
+      <TR><TD BGCOLOR="#E8EEF7"><B>&lt;&lt;abstract&gt;&gt;<BR/>Usuario</B></TD></TR>
+      <TR><TD ALIGN="LEFT">- id : UUID<BR/>- nombre : String<BR/>- email : String</TD></TR>
+      <TR><TD ALIGN="LEFT">+ getId() : UUID<BR/>+ getNombre() : String<BR/>+ getEmail() : String</TD></TR>
+    </TABLE>>];
+
+  Estudiante [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="5">
+      <TR><TD BGCOLOR="#E8EEF7"><B>Estudiante</B></TD></TR>
+      <TR><TD ALIGN="LEFT">- carrera : String</TD></TR>
+      <TR><TD ALIGN="LEFT">+ getCarrera() : String</TD></TR>
+    </TABLE>>];
+
+  Docente [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="5">
+      <TR><TD BGCOLOR="#E8EEF7"><B>Docente</B></TD></TR>
+      <TR><TD ALIGN="LEFT">- especialidad : String<BR/>- horarios : List&lt;HorarioDisponible&gt;</TD></TR>
+      <TR><TD ALIGN="LEFT">+ publicarHorario(inicio, fin)<BR/>+ getHorarios()</TD></TR>
+    </TABLE>>];
+
+  Horario [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="5">
+      <TR><TD BGCOLOR="#E8EEF7"><B>HorarioDisponible</B></TD></TR>
+      <TR><TD ALIGN="LEFT">- id : UUID<BR/>- docente : Docente<BR/>- inicio : LocalDateTime<BR/>- fin : LocalDateTime<BR/>- reservado : boolean</TD></TR>
+      <TR><TD ALIGN="LEFT">+ estaDisponible()<BR/>+ reservar()<BR/>+ liberar()<BR/>+ seSuperpone(inicio, fin)</TD></TR>
+    </TABLE>>];
+
+  Reserva [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="5">
+      <TR><TD BGCOLOR="#E8EEF7"><B>Reserva</B></TD></TR>
+      <TR><TD ALIGN="LEFT">- id : UUID<BR/>- estudiante : Estudiante<BR/>- horario : HorarioDisponible<BR/>- estado : EstadoReserva</TD></TR>
+      <TR><TD ALIGN="LEFT">+ confirmar()<BR/>+ cancelar()<BR/>+ reprogramar(nuevoHorario)<BR/>+ completar()</TD></TR>
+    </TABLE>>];
+
+  Estado [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="5">
+      <TR><TD BGCOLOR="#F5E9EC"><B>&lt;&lt;enum&gt;&gt;<BR/>EstadoReserva</B></TD></TR>
+      <TR><TD ALIGN="LEFT">SOLICITADA<BR/>CONFIRMADA<BR/>REPROGRAMADA<BR/>CANCELADA<BR/>COMPLETADA</TD></TR>
+    </TABLE>>];
+
+  Repo [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="5">
+      <TR><TD BGCOLOR="#E7F3EC"><B>&lt;&lt;interface&gt;&gt;<BR/>ReservaRepository</B></TD></TR>
+      <TR><TD ALIGN="LEFT">+ guardar(reserva)<BR/>+ buscarPorId(id)<BR/>+ listar()</TD></TR>
+    </TABLE>>];
+
+  MemRepo [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="5">
+      <TR><TD BGCOLOR="#E8EEF7"><B>MemoriaReservaRepository</B></TD></TR>
+      <TR><TD ALIGN="LEFT">- reservas : Map&lt;UUID, Reserva&gt;</TD></TR>
+      <TR><TD ALIGN="LEFT">+ guardar(reserva)<BR/>+ buscarPorId(id)<BR/>+ listar()</TD></TR>
+    </TABLE>>];
+
+  Notif [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="5">
+      <TR><TD BGCOLOR="#E7F3EC"><B>&lt;&lt;interface&gt;&gt;<BR/>Notificador</B></TD></TR>
+      <TR><TD ALIGN="LEFT">+ enviar(usuario, mensaje)</TD></TR>
+    </TABLE>>];
+
+  Consola [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="5">
+      <TR><TD BGCOLOR="#E8EEF7"><B>NotificadorConsola</B></TD></TR>
+      <TR><TD ALIGN="LEFT">+ enviar(usuario, mensaje)</TD></TR>
+    </TABLE>>];
+
+  Servicio [label=<
+    <TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="5">
+      <TR><TD BGCOLOR="#F8F0D8"><B>ServicioReservas</B></TD></TR>
+      <TR><TD ALIGN="LEFT">- reservaRepository : ReservaRepository<BR/>- notificador : Notificador</TD></TR>
+      <TR><TD ALIGN="LEFT">+ solicitarTutoria(estudiante, horario)<BR/>+ confirmarReserva(id)<BR/>+ cancelarReserva(id)<BR/>+ reprogramarReserva(id, nuevoHorario)<BR/>+ completarReserva(id)</TD></TR>
+    </TABLE>>];
+
+  Estudiante -> Usuario [arrowhead=empty, label="generaliza"];
+  Docente -> Usuario [arrowhead=empty, label="generaliza"];
+  Docente -> Horario [dir=both, arrowtail=diamond, arrowhead=none, label="1       0..*  publica"];
+  Estudiante -> Reserva [arrowhead=none, label="1      0..*  solicita"];
+  Horario -> Reserva [arrowhead=none, label="1      0..1  asignado"];
+  Reserva -> Estado [arrowhead=vee, label="estado"];
+  MemRepo -> Repo [arrowhead=empty, style=dashed, label="realiza"];
+  Consola -> Notif [arrowhead=empty, style=dashed, label="realiza"];
+  Servicio -> Repo [arrowhead=vee, style=dashed, label="depende"];
+  Servicio -> Notif [arrowhead=vee, style=dashed, label="depende"];
+  Servicio -> Reserva [arrowhead=vee, style=dashed, label="coordina"];
+  Servicio -> Horario [arrowhead=vee, style=dashed, label="valida"];
+}
