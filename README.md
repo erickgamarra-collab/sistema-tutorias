@@ -92,9 +92,7 @@ java -cp target/classes edu.uees.tutorias.App
 
 ## Repositorio GitHub
 
-**URL:** PEGAR_AQUI_URL_DEL_REPOSITORIO
-
-Antes de entregar, comprobar el enlace en una ventana privada para confirmar que el repositorio es accesible.
+**URL:** https://github.com/erickgamarra-collab/sistema-tutorias.git
 
 ## Declaración de uso de inteligencia artificial
 
