@@ -58,7 +58,6 @@ sistema-tutorias/
 ├── pom.xml
 ├── docs/
 │   ├── modelo-clases.puml
-│   ├── modelo-clases.dot
 │   └── modelo-clases.png
 └── src/
     └── main/
