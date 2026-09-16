@@ -1,121 +1,126 @@
-# Sistema de gestión de tutorías — Ae3 Incremento 1
+# Sistema de gestión de tutorías — Ae4 Refactorización
 
-Proyecto de **Diseño de Software (UCOM0310)** evolucionado a partir de Ae1 y Ae2 para el **Ae3 – Incremento 1 del proyecto**.
+Proyecto de **Diseño de Software (UCOM0310)** evolucionado desde Ae1, Ae2 y Ae3. La versión actual corresponde a **Ae4 – Kata de refactorización: Antes y después**.
 
 ## Propósito
 
-Gestionar tutorías entre estudiantes y docentes manteniendo separadas las reglas del dominio, la persistencia, la creación de objetos, las políticas variables y las reacciones ante eventos.
+Gestionar tutorías entre estudiantes y docentes mediante un diseño orientado a objetos. El sistema permite publicar horarios, solicitar, confirmar, cancelar, reprogramar y completar reservas, manteniendo separadas las reglas del dominio, persistencia, notificación, políticas variables y reacciones a eventos.
 
-## Estado inicial recuperado de Ae1
+## Patrones existentes de Ae3
 
-La base del sistema conserva las entidades `Usuario`, `Estudiante`, `Docente`, `HorarioDisponible`, `Reserva` y `EstadoReserva`, además de `ReservaRepository`, `MemoriaReservaRepository`, `Notificador` y `ServicioReservas`.
+El proyecto conserva los patrones implementados en el incremento anterior:
 
-La lógica principal continúa dependiendo de abstracciones para evitar acoplamiento directo con tecnologías concretas.
+- **Builder:** `ReservaBuilder` construye reservas con datos obligatorios y opcionales.
+- **Factory Method:** `NotificacionFactory` y sus fábricas concretas crean diferentes notificadores.
+- **Strategy:** `PoliticaCancelacion` permite intercambiar políticas de cancelación.
+- **Observer:** `ReservaObserver` desacopla notificación y auditoría de los cambios de una reserva.
 
-## Patrones recuperados de Ae2
+## Ae4 - Objetivo de la refactorización
 
-### Builder
+Ae4 no agrega funcionalidades. La actividad mejora la estructura interna y verifica que el comportamiento observable se conserve.
 
-Se mantiene `ReservaBuilder` porque `Reserva` maneja datos obligatorios y opcionales:
+La línea base utilizada fue la versión de Ae3 integrada en `main` en el commit:
 
-- `estudiante` y `horario` son obligatorios para construir una reserva.
-- `id` se genera por defecto, aunque puede definirse explícitamente.
-- `tema`, `observaciones` y `enviarRecordatorio` son opcionales.
-- El estado inicial permanece controlado como `SOLICITADA`.
+```text
+2b7e7d9440b6e33d0c3121f404146560b62ef925
+```
 
-**Beneficio:** evita constructores extensos y permite una construcción progresiva y legible.
+### Code Smells identificados
 
-**Costo/compromiso:** incorpora una clase adicional y varios métodos de configuración.
+| Ubicación | Smell | Mejora aplicada |
+|---|---|---|
+| `Reserva.cancelar()` y `Reserva.reprogramar()` | Condicional duplicado | Extract Method: `validarEstadoNoFinal(...)` |
+| `ServicioReservas.reprogramarReserva()` | Método largo / responsabilidades mezcladas | Extract Method: `validarReprogramacion(...)` y `moverHorario(...)` |
+| `ServicioReservas` | Secuencia repetida de persistencia y notificación | Extract Method: `registrarCambio(...)` |
+| `ServicioReservas` | Magic Strings de eventos | Introduce Constant: constantes `EVENTO_*` |
 
-### Factory Method
+El diagnóstico completo está en [`docs/ae4/diagnostico-plan.md`](docs/ae4/diagnostico-plan.md).
 
-Se mantiene Factory Method para crear distintas implementaciones de `Notificador` sin acoplar al cliente a clases concretas.
+## Línea base y preservación del comportamiento
 
-Participantes principales:
+Se añadieron cuatro pruebas de caracterización en `Ae4LineaBaseTest` para congelar los casos principales antes de modificar el código:
 
-- `NotificacionFactory`
-- `EmailFactory`
-- `SmsFactory`
-- `WhatsAppFactory`
-- `PushFactory`
-- `NotificadorEmail`
-- `NotificadorSms`
-- `NotificadorWhatsApp`
-- `NotificadorPush`
+1. Solicitar tutoría -> `SOLICITADA`, horario ocupado y reserva persistida.
+2. Confirmar tutoría -> `CONFIRMADA`.
+3. Cancelar tutoría -> `CANCELADA` y horario liberado.
+4. Reprogramar tutoría -> `REPROGRAMADA`, horario anterior libre y nuevo ocupado.
 
-**Beneficio:** permite agregar canales sin modificar el código que trabaja con `Notificador`.
+La evidencia inicial está en [`docs/ae4/linea-base.md`](docs/ae4/linea-base.md).
 
-**Costo/compromiso:** aumenta el número de clases al existir una fábrica y un producto concreto por variante.
+## Refactorizaciones realizadas
 
-## Problemas de diseño identificados para Ae3
+### 1. Extraer validación de estado final
 
-### 1. Política de cancelación variable
+La condición que impedía operar sobre reservas `CANCELADA` o `COMPLETADA` estaba repetida. Se extrajo a:
 
-**Problema real:** la regla para permitir una cancelación puede cambiar de manera independiente del resto del caso de uso. Mantenerla fija dentro de `ServicioReservas` aumenta el acoplamiento entre coordinación y política.
+```java
+private void validarEstadoNoFinal(String mensaje)
+```
 
-**Contexto:** una política estándar permite cancelar cualquier reserva que no haya finalizado, mientras que una política restrictiva solo permite cancelar reservas en estado `SOLICITADA`.
+### 2. Extraer pasos de reprogramación
 
-**Patrón seleccionado:** **Strategy**.
+`reprogramarReserva()` mezclaba varias responsabilidades. Ahora delega en:
 
-- `PoliticaCancelacion`
-- `CancelacionEstandar`
-- `CancelacionSoloSolicitada`
+```java
+validarReprogramacion(reserva, nuevoHorario);
+moverHorario(reserva, nuevoHorario);
+```
 
-**Qué permanece estable:** `ServicioReservas` continúa coordinando la operación de cancelación y `Reserva` conserva las reglas invariantes de su ciclo de vida.
+El rollback existente se conserva.
 
-**Beneficio:** la política puede sustituirse en tiempo de ejecución mediante `cambiarPoliticaCancelacion(...)` sin modificar el servicio.
+### 3. Centralizar persistencia y notificación
 
-**Costo/compromiso:** se añaden una interfaz y clases de estrategia, y existe una indirección adicional para comprender el flujo de cancelación.
+La secuencia repetida se concentró en:
 
-**Verificación:** las pruebas cambian la estrategia de un mismo `ServicioReservas` y comprueban que el resultado de cancelar cambia según la política seleccionada.
+```java
+private void registrarCambio(Reserva reserva, String evento)
+```
 
-### 2. Múltiples componentes reaccionan a cambios de una reserva
+La reprogramación conserva su persistencia dentro del bloque protegido por rollback para no cambiar el comportamiento ante errores.
 
-**Problema real:** notificaciones, auditoría u otros componentes pueden necesitar enterarse cuando una reserva se solicita, confirma, cancela, reprograma o completa. Si el servicio conoce cada reacción concreta, aumenta el acoplamiento.
+### 4. Reemplazar mensajes literales por constantes
 
-**Contexto:** la notificación al usuario y el registro de auditoría deben reaccionar al mismo evento sin formar parte de la regla de negocio de `Reserva`.
+Los textos de eventos se concentraron en constantes privadas `EVENTO_*` sin modificar su contenido.
 
-**Patrón seleccionado:** **Observer**.
+## Comparación antes/después
 
-- `ReservaObserver`
-- `NotificacionReservaObserver`
-- `AuditoriaReservaObserver`
+La comparación detallada, fragmentos de código, tabla de preservación y conclusión están en [`docs/ae4/evidencia-despues.md`](docs/ae4/evidencia-despues.md).
 
-**Qué permanece estable:** `ServicioReservas` publica cambios de reserva sin conocer cómo cada receptor procesa el evento.
+## Verificación
 
-**Beneficio:** se pueden agregar nuevos receptores sin modificar la lógica principal del servicio.
+Requiere JDK 17 y Maven.
 
-**Costo/compromiso:** el flujo deja de ser completamente directo porque una operación puede producir efectos a través de una colección de observers.
+```bash
+mvn clean compile
+mvn clean test
+java -cp target/classes edu.uees.tutorias.App
+```
 
-**Verificación:** una prueba registra un observer y comprueba que recibe los eventos de solicitud y confirmación.
+La verificación automática final obtuvo:
 
-## Patrones utilizados
+```text
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+```
 
-| Patrón | Uso en el proyecto |
-|---|---|
-| Builder | Construcción progresiva de `Reserva` |
-| Factory Method | Creación de canales de notificación |
-| Strategy | Políticas intercambiables de cancelación |
-| Observer | Reacción desacoplada a cambios de reserva |
+Los 9 tests corresponden a 5 pruebas de Ae3 y 4 pruebas de caracterización de Ae4. La demostración también conserva el flujo:
 
-## Principios SOLID relacionados
+```text
+SOLICITADA -> CONFIRMADA -> CANCELADA
+```
 
-### SRP — Single Responsibility Principle
+## Historial incremental de Ae4
 
-- `Reserva` protege su ciclo de vida.
-- `ReservaBuilder` se ocupa de construir reservas.
-- Las fábricas se ocupan de crear notificadores.
-- Las estrategias encapsulan políticas de cancelación.
-- Los observers encapsulan reacciones ante eventos.
-- `ServicioReservas` coordina el caso de uso.
+```text
+975e4fa refactor: reemplazar mensajes de eventos por constantes
+87b5356 refactor: centralizar persistencia y notificacion
+e4908de refactor: extraer pasos de reprogramacion
+67337e5 refactor: extraer validacion de estado final
+0b6e2d1 docs: diagnosticar code smells y planificar Ae4
+b279e4b chore: registrar linea base de Ae4
+```
 
-### OCP — Open/Closed Principle
-
-Se pueden agregar nuevos canales de notificación, nuevas políticas de cancelación u observers sin reescribir las clases existentes que dependen de las abstracciones.
-
-### DIP — Dependency Inversion Principle
-
-`ServicioReservas` depende de `ReservaRepository`, `PoliticaCancelacion` y `ReservaObserver`, no de implementaciones concretas de persistencia, políticas o receptores.
+Este historial evidencia el ciclo solicitado: refactorización -> compilación/pruebas -> comparación -> commit -> siguiente cambio.
 
 ## Estructura principal
 
@@ -125,72 +130,35 @@ sistema-tutorias/
 ├── pom.xml
 ├── docs/
 │   ├── modelo-clases.puml
-│   └── uml-incremento1.puml
-├── .github/workflows/
-│   └── ae3-ci.yml
-└── src/
-    ├── main/java/edu/uees/tutorias/
-    │   ├── App.java
-    │   ├── builder/
-    │   ├── domain/
-    │   ├── factory/
-    │   ├── notification/
-    │   ├── observer/
-    │   ├── repository/
-    │   ├── service/
-    │   └── strategy/
-    └── test/java/edu/uees/tutorias/
-        └── Ae3PatternsTest.java
+│   ├── uml-incremento1.puml
+│   └── ae4/
+│       ├── linea-base.md
+│       ├── diagnostico-plan.md
+│       └── evidencia-despues.md
+├── src/
+│   ├── main/java/edu/uees/tutorias/
+│   │   ├── App.java
+│   │   ├── builder/
+│   │   ├── domain/
+│   │   ├── factory/
+│   │   ├── notification/
+│   │   ├── observer/
+│   │   ├── repository/
+│   │   ├── service/
+│   │   └── strategy/
+│   └── test/java/edu/uees/tutorias/
+│       ├── Ae3PatternsTest.java
+│       └── Ae4LineaBaseTest.java
+└── .github/workflows/
+    └── ae3-ci.yml
 ```
-
-## Compilar
-
-Requiere JDK 17 y Maven.
-
-```bash
-mvn clean compile
-```
-
-## Ejecutar pruebas
-
-```bash
-mvn clean test
-```
-
-Las pruebas verifican:
-
-- valores por defecto de Builder;
-- creación del producto esperado mediante Factory Method;
-- intercambio de políticas Strategy dentro de `ServicioReservas`;
-- publicación de eventos Observer;
-- comportamiento de la política restrictiva.
-
-## Ejecutar la demostración
-
-```bash
-java -cp target/classes edu.uees.tutorias.App
-```
-
-La demostración crea una reserva, utiliza `EmailFactory`, registra observers, confirma la reserva y posteriormente la cancela utilizando `CancelacionEstandar`.
-
-## Verificación automática
-
-El workflow `.github/workflows/ae3-ci.yml` ejecuta `mvn clean test` y posteriormente la demostración de `App` en Java 17 para comprobar el incremento en cada actualización de la rama y del Pull Request.
-
-## UML del incremento
-
-Fuente PlantUML actualizada:
-
-- [`docs/uml-incremento1.puml`](docs/uml-incremento1.puml)
-
-El diagrama incluye las clases del dominio y las relaciones introducidas por Builder, Factory Method, Strategy y Observer.
 
 ## Repositorio
 
 https://github.com/erickgamarra-collab/sistema-tutorias
 
-Rama de desarrollo del Ae3: `ae3-incremento1`.
+Rama de Ae4: `ae4-refactorizacion`.
 
 ## Declaración de uso de inteligencia artificial
 
-Durante el desarrollo se utilizaron herramientas de inteligencia artificial como apoyo para revisar la continuidad con Ae1 y Ae2, proponer e implementar la integración de patrones, revisar coherencia entre responsabilidades, código y UML y mejorar la documentación. El contenido fue revisado en relación con la consigna y debe ser ejecutado, comprendido y defendido por el estudiante antes de su entrega.
+Durante Ae4 se utilizaron herramientas de inteligencia artificial como apoyo para analizar el código existente, identificar señales de Code Smells, proponer refactorizaciones pequeñas, revisar que no se introdujeran reglas de negocio nuevas, preparar pruebas de caracterización y organizar la documentación técnica. Cada cambio fue verificado mediante compilación, pruebas automatizadas y ejecución del programa. El estudiante debe comprender y poder defender las decisiones presentadas.
