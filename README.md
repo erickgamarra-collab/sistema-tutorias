@@ -1,56 +1,100 @@
-# Sistema de gestión de tutorías
+# Sistema de gestión de tutorías — Ae3 Incremento 1
 
-Proyecto desarrollado para la **Actividad 5 | Ae1 - Diseño orientado a objetos de un sistema** de la asignatura **Diseño de Software (UCOM0310)**.
+Proyecto de **Diseño de Software (UCOM0310)** evolucionado a partir de Ae1 y Ae2 para el **Ae3 – Incremento 1 del proyecto**.
 
 ## Propósito
 
-Modelar una solución orientada a objetos para gestionar tutorías entre estudiantes y docentes. El sistema permite publicar horarios, solicitar una tutoría, confirmar, cancelar, reprogramar y completar reservas, además de notificar eventos relevantes y aislar la persistencia detrás de una abstracción.
+Gestionar tutorías entre estudiantes y docentes manteniendo separadas las reglas del dominio, la persistencia, la creación de objetos, las políticas variables y las reacciones ante eventos.
 
-## Problema abordado
+## Estado inicial recuperado de Ae1
 
-El dominio requiere coordinar estudiantes que solicitan tutorías, docentes que publican horarios y reservas que cambian de estado. La lógica de negocio no debe depender directamente de una base de datos ni de una tecnología específica de notificación.
+La base del sistema conserva las entidades `Usuario`, `Estudiante`, `Docente`, `HorarioDisponible`, `Reserva` y `EstadoReserva`, además de `ReservaRepository`, `MemoriaReservaRepository`, `Notificador` y `ServicioReservas`.
 
-## Clases principales y responsabilidades
+La lógica principal continúa dependiendo de abstracciones para evitar acoplamiento directo con tecnologías concretas.
 
-- `Usuario`: abstracción con la información común de los usuarios.
-- `Estudiante`: representa a quien solicita la tutoría.
-- `Docente`: representa al tutor y administra sus horarios publicados.
-- `HorarioDisponible`: encapsula una franja de tiempo y su disponibilidad.
-- `Reserva`: registra el encuentro y protege las transiciones de estado.
-- `ServicioReservas`: coordina los casos de uso de solicitar, confirmar, cancelar, reprogramar y completar.
-- `ReservaRepository`: interfaz que desacopla la lógica de aplicación de la tecnología de persistencia.
-- `MemoriaReservaRepository`: implementación en memoria del repositorio.
-- `Notificador`: interfaz para comunicar eventos.
-- `NotificadorConsola`: implementación básica de notificación por consola.
+## Patrones recuperados de Ae2
 
-## Decisiones de diseño
+### Builder
 
-1. **Herencia para usuarios**: `Estudiante` y `Docente` heredan de `Usuario` porque ambos son tipos de usuario y comparten identidad, nombre y correo.
-2. **Composición para horarios**: un `Docente` publica y administra una colección de `HorarioDisponible`; el horario tiene sentido dentro de la disponibilidad de un docente.
-3. **Encapsulación de reglas**: `HorarioDisponible` protege su estado de reservado/libre y `Reserva` controla sus transiciones de estado.
-4. **Persistencia aislada**: `ServicioReservas` depende de `ReservaRepository`, no de una base de datos concreta.
-5. **Notificación desacoplada**: `ServicioReservas` depende de `Notificador`, lo que permite sustituir la implementación sin cambiar los casos de uso.
+Se mantiene `ReservaBuilder` porque `Reserva` ahora maneja datos obligatorios y opcionales:
 
-## Principios SOLID aplicados
+- `id`, `estudiante` y `horario` son obligatorios.
+- `tema`, `observaciones` y `enviarRecordatorio` son opcionales.
+- El estado inicial permanece controlado como `SOLICITADA`.
 
-### SRP - Single Responsibility Principle
+Esto evita constructores extensos y permite una construcción progresiva y legible.
 
-Las responsabilidades se separan por motivo de cambio. `Reserva` gestiona el estado del encuentro, `HorarioDisponible` gestiona disponibilidad, `ServicioReservas` coordina casos de uso, el repositorio se ocupa de persistencia y `Notificador` de comunicación.
+### Factory Method
 
-### DIP - Dependency Inversion Principle
+Se mantiene Factory Method para crear distintas implementaciones de `Notificador` sin acoplar al cliente a clases concretas.
 
-`ServicioReservas` recibe `ReservaRepository` y `Notificador` mediante el constructor. Por ello la lógica no depende de `MemoriaReservaRepository` ni de `NotificadorConsola`; depende de abstracciones.
+Participantes principales:
 
-### OCP - Open/Closed Principle
+- `NotificacionFactory`
+- `EmailFactory`
+- `SmsFactory`
+- `WhatsAppFactory`
+- `PushFactory`
+- `NotificadorEmail`
+- `NotificadorSms`
+- `NotificadorWhatsApp`
+- `NotificadorPush`
 
-Se pueden agregar nuevas implementaciones, por ejemplo un repositorio basado en base de datos o un notificador por correo, implementando las interfaces existentes sin modificar `ServicioReservas`.
+## Problemas de diseño identificados para Ae3
 
-## Diagrama UML
+### 1. Política de cancelación variable
 
-- Fuente PlantUML: [`docs/modelo-clases.puml`](docs/modelo-clases.puml)
-- Imagen: [`docs/modelo-clases.png`](docs/modelo-clases.png)
+La regla para permitir una cancelación puede cambiar de manera independiente del resto del caso de uso. Mantenerla fija dentro de `ServicioReservas` aumenta el acoplamiento entre coordinación y política.
 
-## Estructura
+**Solución:** patrón **Strategy**.
+
+- `PoliticaCancelacion`
+- `CancelacionEstandar`
+- `CancelacionSoloSolicitada`
+
+`ServicioReservas` trabaja contra la interfaz `PoliticaCancelacion`, por lo que la estrategia puede cambiar sin modificar el servicio.
+
+### 2. Múltiples componentes reaccionan a cambios de una reserva
+
+Notificaciones, auditoría u otros componentes pueden necesitar enterarse cuando una reserva se solicita, confirma, cancela, reprograma o completa.
+
+**Solución:** patrón **Observer**.
+
+- `ReservaObserver`
+- `NotificacionReservaObserver`
+- `AuditoriaReservaObserver`
+
+`ServicioReservas` mantiene una colección de observers y publica los eventos sin conocer los detalles de cada reacción.
+
+## Patrones utilizados
+
+| Patrón | Uso en el proyecto |
+|---|---|
+| Builder | Construcción progresiva de `Reserva` |
+| Factory Method | Creación de canales de notificación |
+| Strategy | Políticas intercambiables de cancelación |
+| Observer | Reacción desacoplada a cambios de reserva |
+
+## Principios SOLID relacionados
+
+### SRP — Single Responsibility Principle
+
+- `Reserva` protege su ciclo de vida.
+- `ReservaBuilder` se ocupa de construir reservas.
+- Las fábricas se ocupan de crear notificadores.
+- Las estrategias encapsulan políticas de cancelación.
+- Los observers encapsulan reacciones ante eventos.
+- `ServicioReservas` coordina el caso de uso.
+
+### OCP — Open/Closed Principle
+
+Se pueden agregar nuevos canales de notificación, nuevas políticas de cancelación u observers sin reescribir las clases existentes que dependen de las abstracciones.
+
+### DIP — Dependency Inversion Principle
+
+`ServicioReservas` depende de `ReservaRepository`, `PoliticaCancelacion` y `ReservaObserver`, no de implementaciones concretas de infraestructura o políticas.
+
+## Estructura principal
 
 ```text
 sistema-tutorias/
@@ -58,41 +102,65 @@ sistema-tutorias/
 ├── pom.xml
 ├── docs/
 │   ├── modelo-clases.puml
-│   └── modelo-clases.png
+│   └── uml-incremento1.puml
 └── src/
-    └── main/
-        └── java/
-            └── edu/uees/tutorias/
-                ├── App.java
-                ├── domain/
-                ├── notification/
-                ├── repository/
-                └── service/
+    ├── main/java/edu/uees/tutorias/
+    │   ├── App.java
+    │   ├── builder/
+    │   ├── domain/
+    │   ├── factory/
+    │   ├── notification/
+    │   ├── observer/
+    │   ├── repository/
+    │   ├── service/
+    │   └── strategy/
+    └── test/java/edu/uees/tutorias/
+        └── Ae3PatternsTest.java
 ```
 
-## Requisitos
+## Compilar
 
-- JDK 17 o superior.
-- Apache Maven 3.8 o superior.
-
-## Compilación
-
-Desde la raíz del proyecto:
+Requiere JDK 17 y Maven.
 
 ```bash
 mvn clean compile
 ```
 
-Para ejecutar el ejemplo después de compilar:
+## Ejecutar pruebas
+
+```bash
+mvn clean test
+```
+
+Las pruebas verifican:
+
+- valores por defecto de Builder;
+- intercambio de políticas Strategy;
+- publicación de eventos Observer;
+- rechazo de una cancelación cuando la estrategia seleccionada no la permite.
+
+## Ejecutar la demostración
 
 ```bash
 java -cp target/classes edu.uees.tutorias.App
 ```
 
-## Repositorio GitHub
+La demostración crea una reserva, utiliza `EmailFactory`, registra observers, confirma la reserva y posteriormente la cancela utilizando `CancelacionEstandar`.
 
-**URL:** https://github.com/erickgamarra-collab/sistema-tutorias.git
+## UML del incremento
+
+Fuente PlantUML actualizada:
+
+- [`docs/uml-incremento1.puml`](docs/uml-incremento1.puml)
+
+El diagrama incluye las clases del dominio y las relaciones introducidas por Builder, Factory Method, Strategy y Observer.
+
+## Repositorio
+
+https://github.com/erickgamarra-collab/sistema-tutorias
+
+Rama de desarrollo del Ae3: `ae3-incremento1`.
 
 ## Declaración de uso de inteligencia artificial
 
-Durante el desarrollo de esta actividad utilicé herramientas de inteligencia artificial como apoyo para organizar el análisis del dominio, revisar la distribución de responsabilidades, proponer una estructura inicial del código y mejorar la redacción de la documentación. Verifiqué y adapté el contenido generado, revisé la coherencia entre UML y código y asumo la responsabilidad de comprender y justificar las decisiones presentadas.
+Durante el desarrollo se utilizaron herramientas de inteligencia artificial como apoyo para revisar la continuidad con Ae1 y Ae2, proponer e implementar la integración de patrones, revisar coherencia entre responsabilidades, código y UML, y mejorar la documentación. El código y las decisiones deben ser revisados, ejecutados y comprendidos por el estudiante antes de su entrega.
