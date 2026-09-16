@@ -6,6 +6,8 @@ import edu.uees.tutorias.domain.EstadoReserva;
 import edu.uees.tutorias.domain.Estudiante;
 import edu.uees.tutorias.domain.HorarioDisponible;
 import edu.uees.tutorias.domain.Reserva;
+import edu.uees.tutorias.factory.EmailFactory;
+import edu.uees.tutorias.notification.NotificadorEmail;
 import edu.uees.tutorias.repository.MemoriaReservaRepository;
 import edu.uees.tutorias.service.ServicioReservas;
 import edu.uees.tutorias.strategy.CancelacionEstandar;
@@ -36,14 +38,26 @@ class Ae3PatternsTest {
     }
 
     @Test
-    void strategyPermiteCambiarLaPoliticaSinModificarElServicio() {
-        Estudiante estudiante = estudiante();
-        HorarioDisponible horario = horario();
-        Reserva reserva = new ReservaBuilder().estudiante(estudiante).horario(horario).build();
-        reserva.confirmar();
+    void factoryMethodCreaElNotificadorEsperado() {
+        assertInstanceOf(NotificadorEmail.class, new EmailFactory().crearNotificador());
+    }
 
-        assertTrue(new CancelacionEstandar().puedeCancelar(reserva));
-        assertFalse(new CancelacionSoloSolicitada().puedeCancelar(reserva));
+    @Test
+    void strategyPermiteCambiarLaPoliticaSinModificarElServicio() {
+        ServicioReservas servicio = new ServicioReservas(
+                new MemoriaReservaRepository(), new CancelacionSoloSolicitada());
+        Reserva reserva = servicio.solicitarTutoria(estudiante(), horario());
+        servicio.confirmarReserva(reserva.getId());
+
+        assertThrows(IllegalStateException.class,
+                () -> servicio.cancelarReserva(reserva.getId()));
+        assertEquals(EstadoReserva.CONFIRMADA, reserva.getEstado());
+
+        servicio.cambiarPoliticaCancelacion(new CancelacionEstandar());
+        servicio.cancelarReserva(reserva.getId());
+
+        assertEquals(EstadoReserva.CANCELADA, reserva.getEstado());
+        assertTrue(reserva.getHorario().estaDisponible());
     }
 
     @Test
@@ -60,15 +74,16 @@ class Ae3PatternsTest {
     }
 
     @Test
-    void politicaRestrictivaImpideCancelarReservaConfirmada() {
-        ServicioReservas servicio = new ServicioReservas(
-                new MemoriaReservaRepository(), new CancelacionSoloSolicitada());
-        Reserva reserva = servicio.solicitarTutoria(estudiante(), horario());
-        servicio.confirmarReserva(reserva.getId());
+    void politicaRestrictivaSoloPermiteEstadoSolicitada() {
+        CancelacionSoloSolicitada politica = new CancelacionSoloSolicitada();
+        Reserva reserva = new ReservaBuilder()
+                .estudiante(estudiante())
+                .horario(horario())
+                .build();
 
-        assertThrows(IllegalStateException.class,
-                () -> servicio.cancelarReserva(reserva.getId()));
-        assertEquals(EstadoReserva.CONFIRMADA, reserva.getEstado());
+        assertTrue(politica.puedeCancelar(reserva));
+        reserva.confirmar();
+        assertFalse(politica.puedeCancelar(reserva));
     }
 
     private static Estudiante estudiante() {
