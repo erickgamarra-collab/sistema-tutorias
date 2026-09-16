@@ -21,6 +21,12 @@ import java.util.UUID;
  * las reacciones a eventos se delegan a Strategy y Observer.
  */
 public final class ServicioReservas {
+    private static final String EVENTO_SOLICITADA = "Nueva tutoría solicitada.";
+    private static final String EVENTO_CONFIRMADA = "Tutoría confirmada.";
+    private static final String EVENTO_CANCELADA = "Tutoría cancelada.";
+    private static final String EVENTO_REPROGRAMADA = "Tutoría reprogramada.";
+    private static final String EVENTO_COMPLETADA = "Tutoría completada.";
+
     private final ReservaRepository reservaRepository;
     private final List<ReservaObserver> observers = new ArrayList<>();
     private PoliticaCancelacion politicaCancelacion;
@@ -66,14 +72,14 @@ public final class ServicioReservas {
                 .estudiante(estudiante)
                 .horario(horario)
                 .build();
-        registrarCambio(reserva, "Nueva tutoría solicitada.");
+        registrarCambio(reserva, EVENTO_SOLICITADA);
         return reserva;
     }
 
     public Reserva confirmarReserva(UUID reservaId) {
         Reserva reserva = obtenerReserva(reservaId);
         reserva.confirmar();
-        registrarCambio(reserva, "Tutoría confirmada.");
+        registrarCambio(reserva, EVENTO_CONFIRMADA);
         return reserva;
     }
 
@@ -85,7 +91,7 @@ public final class ServicioReservas {
         }
         reserva.cancelar();
         reserva.getHorario().liberar();
-        registrarCambio(reserva, "Tutoría cancelada.");
+        registrarCambio(reserva, EVENTO_CANCELADA);
         return reserva;
     }
 
@@ -93,7 +99,7 @@ public final class ServicioReservas {
         Reserva reserva = obtenerReserva(reservaId);
         validarReprogramacion(reserva, nuevoHorario);
         moverHorario(reserva, nuevoHorario);
-        notificarCambio(reserva, "Tutoría reprogramada.");
+        notificarCambio(reserva, EVENTO_REPROGRAMADA);
         return reserva;
     }
 
@@ -124,7 +130,7 @@ public final class ServicioReservas {
     public Reserva completarReserva(UUID reservaId) {
         Reserva reserva = obtenerReserva(reservaId);
         reserva.completar();
-        registrarCambio(reserva, "Tutoría completada.");
+        registrarCambio(reserva, EVENTO_COMPLETADA);
         return reserva;
     }
 
