@@ -66,16 +66,14 @@ public final class ServicioReservas {
                 .estudiante(estudiante)
                 .horario(horario)
                 .build();
-        reservaRepository.guardar(reserva);
-        notificarCambio(reserva, "Nueva tutoría solicitada.");
+        registrarCambio(reserva, "Nueva tutoría solicitada.");
         return reserva;
     }
 
     public Reserva confirmarReserva(UUID reservaId) {
         Reserva reserva = obtenerReserva(reservaId);
         reserva.confirmar();
-        reservaRepository.guardar(reserva);
-        notificarCambio(reserva, "Tutoría confirmada.");
+        registrarCambio(reserva, "Tutoría confirmada.");
         return reserva;
     }
 
@@ -87,8 +85,7 @@ public final class ServicioReservas {
         }
         reserva.cancelar();
         reserva.getHorario().liberar();
-        reservaRepository.guardar(reserva);
-        notificarCambio(reserva, "Tutoría cancelada.");
+        registrarCambio(reserva, "Tutoría cancelada.");
         return reserva;
     }
 
@@ -127,8 +124,7 @@ public final class ServicioReservas {
     public Reserva completarReserva(UUID reservaId) {
         Reserva reserva = obtenerReserva(reservaId);
         reserva.completar();
-        reservaRepository.guardar(reserva);
-        notificarCambio(reserva, "Tutoría completada.");
+        registrarCambio(reserva, "Tutoría completada.");
         return reserva;
     }
 
@@ -136,6 +132,11 @@ public final class ServicioReservas {
         Objects.requireNonNull(id, "El id de reserva es obligatorio");
         return reservaRepository.buscarPorId(id)
                 .orElseThrow(() -> new IllegalArgumentException("No existe una reserva con id " + id));
+    }
+
+    private void registrarCambio(Reserva reserva, String evento) {
+        reservaRepository.guardar(reserva);
+        notificarCambio(reserva, evento);
     }
 
     private void notificarCambio(Reserva reserva, String evento) {
