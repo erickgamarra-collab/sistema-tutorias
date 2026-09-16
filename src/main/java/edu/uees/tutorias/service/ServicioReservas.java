@@ -1,24 +1,56 @@
 package edu.uees.tutorias.service;
 
+import edu.uees.tutorias.builder.ReservaBuilder;
 import edu.uees.tutorias.domain.Estudiante;
 import edu.uees.tutorias.domain.HorarioDisponible;
 import edu.uees.tutorias.domain.Reserva;
 import edu.uees.tutorias.notification.Notificador;
+import edu.uees.tutorias.observer.NotificacionReservaObserver;
+import edu.uees.tutorias.observer.ReservaObserver;
 import edu.uees.tutorias.repository.ReservaRepository;
+import edu.uees.tutorias.strategy.CancelacionEstandar;
+import edu.uees.tutorias.strategy.PoliticaCancelacion;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Caso de uso que coordina reservas, persistencia y notificación mediante abstracciones.
+ * Caso de uso que coordina reservas y persistencia. Las políticas variables y
+ * las reacciones a eventos se delegan a Strategy y Observer.
  */
 public final class ServicioReservas {
     private final ReservaRepository reservaRepository;
-    private final Notificador notificador;
+    private final List<ReservaObserver> observers = new ArrayList<>();
+    private PoliticaCancelacion politicaCancelacion;
 
+    /**
+     * Constructor compatible con Ae1: conserva la notificación y utiliza la
+     * política estándar de cancelación.
+     */
     public ServicioReservas(ReservaRepository reservaRepository, Notificador notificador) {
+        this(reservaRepository, new CancelacionEstandar());
+        registrarObserver(new NotificacionReservaObserver(notificador));
+    }
+
+    public ServicioReservas(ReservaRepository reservaRepository, PoliticaCancelacion politicaCancelacion) {
         this.reservaRepository = Objects.requireNonNull(reservaRepository, "El repositorio es obligatorio");
-        this.notificador = Objects.requireNonNull(notificador, "El notificador es obligatorio");
+        this.politicaCancelacion = Objects.requireNonNull(
+                politicaCancelacion, "La política de cancelación es obligatoria");
+    }
+
+    public void registrarObserver(ReservaObserver observer) {
+        observers.add(Objects.requireNonNull(observer, "El observer es obligatorio"));
+    }
+
+    public void eliminarObserver(ReservaObserver observer) {
+        observers.remove(observer);
+    }
+
+    public void cambiarPoliticaCancelacion(PoliticaCancelacion politicaCancelacion) {
+        this.politicaCancelacion = Objects.requireNonNull(
+                politicaCancelacion, "La política de cancelación es obligatoria");
     }
 
     public Reserva solicitarTutoria(Estudiante estudiante, HorarioDisponible horario) {
@@ -30,10 +62,12 @@ public final class ServicioReservas {
         }
 
         horario.reservar();
-        Reserva reserva = new Reserva(estudiante, horario);
+        Reserva reserva = new ReservaBuilder()
+                .estudiante(estudiante)
+                .horario(horario)
+                .build();
         reservaRepository.guardar(reserva);
-
-        notificarParticipantes(reserva, "Nueva tutoría solicitada. Estado: " + reserva.getEstado());
+        notificarCambio(reserva, "Nueva tutoría solicitada.");
         return reserva;
     }
 
@@ -41,16 +75,20 @@ public final class ServicioReservas {
         Reserva reserva = obtenerReserva(reservaId);
         reserva.confirmar();
         reservaRepository.guardar(reserva);
-        notificarParticipantes(reserva, "Tutoría confirmada.");
+        notificarCambio(reserva, "Tutoría confirmada.");
         return reserva;
     }
 
     public Reserva cancelarReserva(UUID reservaId) {
         Reserva reserva = obtenerReserva(reservaId);
+        if (!politicaCancelacion.puedeCancelar(reserva)) {
+            throw new IllegalStateException(
+                    "La reserva no puede cancelarse con la política: " + politicaCancelacion.descripcion());
+        }
         reserva.cancelar();
         reserva.getHorario().liberar();
         reservaRepository.guardar(reserva);
-        notificarParticipantes(reserva, "Tutoría cancelada.");
+        notificarCambio(reserva, "Tutoría cancelada.");
         return reserva;
     }
 
@@ -76,7 +114,7 @@ public final class ServicioReservas {
             throw ex;
         }
 
-        notificarParticipantes(reserva, "Tutoría reprogramada. Nuevo estado: " + reserva.getEstado());
+        notificarCambio(reserva, "Tutoría reprogramada.");
         return reserva;
     }
 
@@ -84,7 +122,7 @@ public final class ServicioReservas {
         Reserva reserva = obtenerReserva(reservaId);
         reserva.completar();
         reservaRepository.guardar(reserva);
-        notificarParticipantes(reserva, "Tutoría completada.");
+        notificarCambio(reserva, "Tutoría completada.");
         return reserva;
     }
 
@@ -94,8 +132,9 @@ public final class ServicioReservas {
                 .orElseThrow(() -> new IllegalArgumentException("No existe una reserva con id " + id));
     }
 
-    private void notificarParticipantes(Reserva reserva, String mensaje) {
-        notificador.enviar(reserva.getEstudiante(), mensaje);
-        notificador.enviar(reserva.getDocente(), mensaje);
+    private void notificarCambio(Reserva reserva, String evento) {
+        for (ReservaObserver observer : List.copyOf(observers)) {
+            observer.actualizar(reserva, evento);
+        }
     }
 }
