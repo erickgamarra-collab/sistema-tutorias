@@ -48,22 +48,24 @@ public final class Reserva {
     }
 
     public void cancelar() {
-        if (estado == EstadoReserva.CANCELADA || estado == EstadoReserva.COMPLETADA) {
-            throw new IllegalStateException("La reserva no puede cancelarse en su estado actual");
-        }
+        validarEstadoNoFinal("La reserva no puede cancelarse en su estado actual");
         estado = EstadoReserva.CANCELADA;
     }
 
     public void reprogramar(HorarioDisponible nuevoHorario) {
         Objects.requireNonNull(nuevoHorario, "El nuevo horario es obligatorio");
-        if (estado == EstadoReserva.CANCELADA || estado == EstadoReserva.COMPLETADA) {
-            throw new IllegalStateException("La reserva no puede reprogramarse en su estado actual");
-        }
+        validarEstadoNoFinal("La reserva no puede reprogramarse en su estado actual");
         if (!horario.getDocente().getId().equals(nuevoHorario.getDocente().getId())) {
             throw new IllegalArgumentException("Una reprogramación debe conservar al mismo docente");
         }
         horario = nuevoHorario;
         estado = EstadoReserva.REPROGRAMADA;
+    }
+
+    private void validarEstadoNoFinal(String mensaje) {
+        if (estado == EstadoReserva.CANCELADA || estado == EstadoReserva.COMPLETADA) {
+            throw new IllegalStateException(mensaje);
+        }
     }
 
     public void completar() {
