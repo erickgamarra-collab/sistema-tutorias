@@ -94,6 +94,13 @@ public final class ServicioReservas {
 
     public Reserva reprogramarReserva(UUID reservaId, HorarioDisponible nuevoHorario) {
         Reserva reserva = obtenerReserva(reservaId);
+        validarReprogramacion(reserva, nuevoHorario);
+        moverHorario(reserva, nuevoHorario);
+        notificarCambio(reserva, "Tutoría reprogramada.");
+        return reserva;
+    }
+
+    private void validarReprogramacion(Reserva reserva, HorarioDisponible nuevoHorario) {
         Objects.requireNonNull(nuevoHorario, "El nuevo horario es obligatorio");
 
         if (!nuevoHorario.estaDisponible()) {
@@ -102,7 +109,9 @@ public final class ServicioReservas {
         if (!reserva.getDocente().getId().equals(nuevoHorario.getDocente().getId())) {
             throw new IllegalArgumentException("La reprogramación debe conservar al mismo docente");
         }
+    }
 
+    private void moverHorario(Reserva reserva, HorarioDisponible nuevoHorario) {
         HorarioDisponible horarioAnterior = reserva.getHorario();
         nuevoHorario.reservar();
         try {
@@ -113,9 +122,6 @@ public final class ServicioReservas {
             nuevoHorario.liberar();
             throw ex;
         }
-
-        notificarCambio(reserva, "Tutoría reprogramada.");
-        return reserva;
     }
 
     public Reserva completarReserva(UUID reservaId) {
