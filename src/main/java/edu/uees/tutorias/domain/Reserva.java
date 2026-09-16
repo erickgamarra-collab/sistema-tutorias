@@ -12,16 +12,32 @@ public final class Reserva {
     private final Estudiante estudiante;
     private HorarioDisponible horario;
     private EstadoReserva estado;
+    private final String tema;
+    private final String observaciones;
+    private final boolean enviarRecordatorio;
 
     public Reserva(Estudiante estudiante, HorarioDisponible horario) {
-        this(UUID.randomUUID(), estudiante, horario, EstadoReserva.SOLICITADA);
+        this(UUID.randomUUID(), estudiante, horario, EstadoReserva.SOLICITADA,
+                "Sin especificar", "Sin observaciones", false);
     }
 
     public Reserva(UUID id, Estudiante estudiante, HorarioDisponible horario, EstadoReserva estado) {
+        this(id, estudiante, horario, estado, "Sin especificar", "Sin observaciones", false);
+    }
+
+    public Reserva(UUID id, Estudiante estudiante, HorarioDisponible horario, EstadoReserva estado,
+                   String tema, String observaciones, boolean enviarRecordatorio) {
         this.id = Objects.requireNonNull(id, "El id es obligatorio");
         this.estudiante = Objects.requireNonNull(estudiante, "El estudiante es obligatorio");
         this.horario = Objects.requireNonNull(horario, "El horario es obligatorio");
         this.estado = Objects.requireNonNull(estado, "El estado es obligatorio");
+        this.tema = normalizarTexto(tema, "Sin especificar");
+        this.observaciones = normalizarTexto(observaciones, "Sin observaciones");
+        this.enviarRecordatorio = enviarRecordatorio;
+    }
+
+    private static String normalizarTexto(String valor, String valorPorDefecto) {
+        return valor == null || valor.isBlank() ? valorPorDefecto : valor.trim();
     }
 
     public void confirmar() {
@@ -75,5 +91,17 @@ public final class Reserva {
 
     public EstadoReserva getEstado() {
         return estado;
+    }
+
+    public String getTema() {
+        return tema;
+    }
+
+    public String getObservaciones() {
+        return observaciones;
+    }
+
+    public boolean isEnviarRecordatorio() {
+        return enviarRecordatorio;
     }
 }
