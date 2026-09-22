@@ -54,4 +54,4 @@ La mejora de diseño se demuestra con los límites de responsabilidad más claro
 Utilicé herramientas de inteligencia artificial para preparar la implementación de la guía, organizar el diagnóstico, proponer pruebas, comprobar la coherencia del refactor y redactar la documentación. La validación técnica se realizó con GitHub Actions y el historial de commits. **Asumo la responsabilidad de comprender y defender las decisiones presentadas.**
 
 ## 11. Repositorio
-https://github.com/erickgamarra-collab/sistema-tutorias — rama `semana6-labs-ae5`; carpeta `semana6-lab-diagnostico`.
+https://github.com/erickgamarra-collab/sistema-tutorias — rama final `main`; Rama utilizada durante el desarrollo `semana6-labs-ae5`; Pull Request: #4 `fusionado correctamente`
