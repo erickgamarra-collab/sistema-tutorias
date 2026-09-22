@@ -20,7 +20,7 @@ NORMAL=40.0; VIP=34.0; correo/período inválidos o anticipación de una hora re
 
 - `src/main/java/edu/uees/refactor/domain`: `Reserva`, `EstadoReserva`, Value Object `PeriodoReserva`; `Dinero` existe solo para el ejercicio aislado de assertThrows.
 - `src/main/java/edu/uees/refactor/service`: `ServicioReservas`, `CalculadoraTarifa`, `RegistroReservaConsola` y `NotificacionReservaConsola`.
-- `src/test/java/edu/uees/refactor`: 15 pruebas JUnit en total, incluidas regresiones de NORMAL/VIP, entradas inválidas, casos límite y efectos de consola.
+- `src/test/java/edu/uees/refactor`: 15 pruebas JUnit en total, incluidas pruebas de caracterización de NORMAL y VIP, entradas inválidas, casos límite y efectos de consola.
 - `docs/lab1`: línea base, observaciones, matriz con seis smells, riesgos, plan y reflexión.
 - `docs/lab2`: estrategia AAA, pruebas, micro-refactorización, regresión intencional en PR #3 y reflexión.
 - `docs/ae5`: reporte técnico, justificaciones y comparación antes/después.
