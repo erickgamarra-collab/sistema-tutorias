@@ -2,7 +2,10 @@ package edu.uees.refactor.service;
 
 import edu.uees.refactor.domain.Reserva;
 
+/** Coordina el caso de uso; las tarifas se calculan en otra responsabilidad. */
 public class ServicioReservas {
+    private final CalculadoraTarifa calculadoraTarifa = new CalculadoraTarifa();
+
     public double procesar(Reserva r, int horasAnticipacion) {
         if (r == null) {
             return 0;
@@ -18,19 +21,11 @@ public class ServicioReservas {
             return 0;
         }
 
-        double total = calcularTotal(r);
+        double total = calculadoraTarifa.calcularTotal(r);
 
         System.out.println("Guardando reserva " + r.getId());
         System.out.println("Correo enviado a " + r.getCorreo());
         r.confirmar();
-        return total;
-    }
-
-    private double calcularTotal(Reserva r) {
-        double total = 40;
-        if ("VIP".equals(r.getTipo())) {
-            return total * 0.85;
-        }
         return total;
     }
 }
