@@ -29,7 +29,7 @@ public class ServicioReservas {
     private double calcularTotal(Reserva r) {
         double total = 40;
         if ("VIP".equals(r.getTipo())) {
-            return total * 0.85;
+            return total * 0.80;
         }
         return total;
     }
