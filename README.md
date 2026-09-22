@@ -1,6 +1,6 @@
-# Sistema de gestión de tutorías — Ae4 Refactorización
+# Sistema de gestión de tutorías
 
-Proyecto de **Diseño de Software (UCOM0310)** evolucionado desde Ae1, Ae2 y Ae3. La versión actual corresponde a **Ae4 – Kata de refactorización: Antes y después**.
+Proyecto académico desarrollado progresivamente desde Ae1 hasta Ae5. La raíz contiene el sistema de tutorías trabajado en Ae1–Ae4, mientras que la carpeta semana6-lab-diagnostico contiene el proyecto heredado utilizado para los laboratorios y Ae5.
 
 ## Propósito
 
@@ -161,4 +161,4 @@ Rama de Ae4: `ae4-refactorizacion`.
 
 ## Declaración de uso de inteligencia artificial
 
-Durante Ae4 se utilizaron herramientas de inteligencia artificial como apoyo para analizar el código existente, identificar señales de Code Smells, proponer refactorizaciones pequeñas, revisar que no se introdujeran reglas de negocio nuevas, preparar pruebas de caracterización y organizar la documentación técnica. Cada cambio fue verificado mediante compilación, pruebas automatizadas y ejecución del programa. El estudiante debe comprender y poder defender las decisiones presentadas.
+Durante Ae4 se utilizaron herramientas de inteligencia artificial como apoyo para analizar el código existente, identificar señales de Code Smells, proponer refactorizaciones pequeñas, revisar que no se introdujeran reglas de negocio nuevas, preparar pruebas de caracterización y organizar la documentación técnica. Cada cambio fue verificado mediante compilación, pruebas automatizadas y ejecución del programa. Asumo la responsabilidad de comprender y defender las decisiones presentadas.
