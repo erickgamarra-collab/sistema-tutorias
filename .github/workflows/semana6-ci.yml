@@ -20,5 +20,5 @@ jobs:
           cache-dependency-path: semana6-lab-diagnostico/pom.xml
       - name: Compilar y ejecutar pruebas
         run: mvn -B -f semana6-lab-diagnostico/pom.xml clean test
-      - name: Ejecutar ejemplo original
+      - name: Ejecutar demostración
         run: java -cp semana6-lab-diagnostico/target/classes edu.uees.refactor.app.Main
