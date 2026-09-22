@@ -2,7 +2,7 @@ package edu.uees.refactor.service;
 
 import edu.uees.refactor.domain.Reserva;
 
-/** Coordina el caso de uso sin asumir el cálculo de tarifa ni las salidas externas. */
+/** Coordina el caso de uso sin asumir las tarifas ni las salidas externas. */
 public class ServicioReservas {
     private final CalculadoraTarifa calculadoraTarifa = new CalculadoraTarifa();
     private final RegistroReservaConsola registroReserva = new RegistroReservaConsola();
@@ -15,8 +15,7 @@ public class ServicioReservas {
         if (r.getCorreo() == null || !r.getCorreo().contains("@")) {
             return 0;
         }
-        if (r.getInicio() == null || r.getFin() == null
-                || !r.getFin().isAfter(r.getInicio())) {
+        if (!r.getPeriodo().esValido()) {
             return 0;
         }
         if (horasAnticipacion < 2) {
