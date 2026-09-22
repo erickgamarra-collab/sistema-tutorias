@@ -1,0 +1,24 @@
+name: Semana 6 — laboratorios y Ae5
+on:
+  push:
+    branches: [semana6-labs-ae5]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'semana6-lab-diagnostico/**'
+      - '.github/workflows/semana6-ci.yml'
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: semana6-lab-diagnostico/pom.xml
+      - name: Compilar y ejecutar pruebas
+        run: mvn -B -f semana6-lab-diagnostico/pom.xml clean test
+      - name: Ejecutar ejemplo original
+        run: java -cp semana6-lab-diagnostico/target/classes edu.uees.refactor.app.Main
